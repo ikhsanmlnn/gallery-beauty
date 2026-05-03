@@ -11,8 +11,10 @@ RUN apt-get update && apt-get install -y \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
+# Hapus default Apache page
+RUN rm -rf /var/www/html/*
+
 WORKDIR /var/www/html
-RUN rm -f /var/www/html/index.html
 
 COPY . .
 
