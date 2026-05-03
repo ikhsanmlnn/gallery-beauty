@@ -1,23 +1,22 @@
 FROM php:8.1-apache
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Fix MPM conflict
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork rewrite
 
-# Install PHP extensions for MySQL
+# Install PHP MySQL extension
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy all project files
 COPY . .
 
-# Set upload folder permissions
+# Permissions for upload folder
 RUN mkdir -p /var/www/html/upload/images \
     && chmod -R 775 /var/www/html/upload \
     && chown -R www-data:www-data /var/www/html/upload
 
-# Apache config: allow .htaccess override
+# Allow .htaccess
 RUN echo '<Directory /var/www/html>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
