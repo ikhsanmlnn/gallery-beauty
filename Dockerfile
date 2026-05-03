@@ -1,20 +1,28 @@
 FROM php:8.1-apache
 
-# Install extension MySQL untuk CodeIgniter
-RUN docker-php-ext-install mysqli
+RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-# Enable mod_rewrite untuk .htaccess CodeIgniter
-RUN a2enmod rewrite
+# Hapus semua MPM load files, sisakan prefork saja
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.load \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.conf \
+    && ln -s /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
+    && ln -s /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf \
+    && a2enmod rewrite
 
-# Hapus halaman default Apache
-RUN rm -f /var/www/html/index.html
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html\n\
+    <Directory /var/www/html>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Copy semua project ke web root Apache
-COPY . /var/www/html/
+WORKDIR /var/www/html
+COPY . .
 
-# Permission folder
-RUN chown -R www-data:www-data /var/www/html
-RUN chmod -R 755 /var/www/html
-RUN chmod -R 777 /var/www/html/upload
+RUN mkdir -p upload/images \
+    && chmod -R 775 upload \
+    && chown -R www-data:www-data /var/www/html
 
 EXPOSE 80
