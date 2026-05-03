@@ -1,24 +1,25 @@
-FROM php:8.1-apache
+FROM ubuntu:22.04
 
-# Force disable all MPM first, then enable only prefork
-RUN apt-get update && apt-get install -y apache2 \
-    && a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true \
-    && a2enmod mpm_prefork \
-    && a2enmod rewrite
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install PHP MySQL extension
-RUN docker-php-ext-install mysqli pdo pdo_mysql
+RUN apt-get update && apt-get install -y \
+    apache2 \
+    php8.1 \
+    php8.1-mysqli \
+    php8.1-pdo \
+    libapache2-mod-php8.1 \
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
+RUN rm -f /var/www/html/index.html
 
 COPY . .
 
-# Permissions for upload folder
 RUN mkdir -p /var/www/html/upload/images \
     && chmod -R 775 /var/www/html/upload \
-    && chown -R www-data:www-data /var/www/html/upload
+    && chown -R www-data:www-data /var/www/html
 
-# Allow .htaccess
 RUN echo '<Directory /var/www/html>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
@@ -27,3 +28,5 @@ RUN echo '<Directory /var/www/html>\n\
     && a2enconf override
 
 EXPOSE 80
+
+CMD ["apache2ctl", "-D", "FOREGROUND"]
