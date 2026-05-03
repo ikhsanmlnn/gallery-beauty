@@ -1,20 +1,16 @@
-FROM ubuntu:22.04
+FROM php:8.1-apache
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Install mysqli
+RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-RUN apt-get update && apt-get install -y \
-    apache2 \
-    php8.1 \
-    php8.1-mysqli \
-    php8.1-pdo \
-    libapache2-mod-php8.1 \
-    && rm -rf /var/lib/apt/lists/*
+# Fix MPM & enable rewrite
+RUN apt-get update \
+    && apt-get install -y libapache2-mod-php8.1 2>/dev/null || true \
+    && rm -rf /var/lib/apt/lists/* \
+    && a2dismod mpm_event 2>/dev/null || true \
+    && a2enmod mpm_prefork rewrite
 
-# Disable default site, enable rewrite
-RUN a2dissite 000-default \
-    && a2enmod rewrite php8.1
-
-# Buat virtual host config baru
+# Virtual host
 RUN echo '<VirtualHost *:80>\n\
     DocumentRoot /var/www/html\n\
     <Directory /var/www/html>\n\
@@ -22,11 +18,7 @@ RUN echo '<VirtualHost *:80>\n\
         AllowOverride All\n\
         Require all granted\n\
     </Directory>\n\
-</VirtualHost>' > /etc/apache2/sites-available/gallery.conf \
-    && a2ensite gallery
-
-# Hapus default html
-RUN rm -rf /var/www/html/*
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
 WORKDIR /var/www/html
 COPY . .
@@ -36,4 +28,3 @@ RUN mkdir -p upload/images \
     && chown -R www-data:www-data /var/www/html
 
 EXPOSE 80
-CMD ["apache2ctl", "-D", "FOREGROUND"]
